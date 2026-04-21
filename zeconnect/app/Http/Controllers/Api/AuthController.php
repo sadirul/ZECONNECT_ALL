@@ -12,14 +12,9 @@ use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
 {
-    public function userLogin(Request $request): JsonResponse
+    public function login(Request $request): JsonResponse
     {
-        return $this->loginByRole($request, 'user');
-    }
-
-    public function agentLogin(Request $request): JsonResponse
-    {
-        return $this->loginByRole($request, 'agent');
+        return $this->loginFromUsersTable($request);
     }
 
     public function me(Request $request): JsonResponse
@@ -78,26 +73,34 @@ class AuthController extends Controller
         ]);
     }
 
-    protected function loginByRole(Request $request, string $role): JsonResponse
+    protected function loginFromUsersTable(Request $request): JsonResponse
     {
         $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
         ]);
 
+        $email = $request->string('email')->toString();
+        $password = $request->string('password')->toString();
+
         /** @var \App\Models\User|null $user */
         $user = User::query()
-            ->where('email', $request->string('email')->toString())
-            ->where('role', $role)
+            ->where('email', $email)
             ->first();
 
         if (! $user || ! Auth::guard('api')->validate([
-            'email' => $request->string('email')->toString(),
-            'password' => $request->string('password')->toString(),
+            'email' => $email,
+            'password' => $password,
         ])) {
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are invalid.'],
             ]);
+        }
+
+        if (! in_array($user->role, ['user', 'agent'], true)) {
+            return response()->json([
+                'message' => 'This account is not allowed to use this login endpoint.',
+            ], 403);
         }
 
         if (! $user->is_active) {
@@ -107,10 +110,10 @@ class AuthController extends Controller
         }
 
         $token = JWTAuth::claims([
-            'role' => $role,
+            'role' => $user->role,
         ])->fromUser($user);
 
-        return $this->respondWithToken($token, ucfirst($role).' login successful.');
+        return $this->respondWithToken($token, ucfirst($user->role).' login successful.');
     }
 
     protected function respondWithToken(string $token, string $message): JsonResponse
