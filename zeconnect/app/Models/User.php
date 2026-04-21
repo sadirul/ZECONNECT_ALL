@@ -29,6 +29,11 @@ class User extends Authenticatable implements JWTSubject
         'profile_pic',
         'role',
         'is_active',
+        'is_verified',
+        'otp',
+        'otp_expires_at',
+        'reset_otp',
+        'reset_otp_expires_at',
     ];
 
     /**
@@ -39,6 +44,8 @@ class User extends Authenticatable implements JWTSubject
     protected $hidden = [
         'password',
         'remember_token',
+        'otp',
+        'reset_otp',
     ];
 
     /**
@@ -52,6 +59,9 @@ class User extends Authenticatable implements JWTSubject
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'is_verified' => 'boolean',
+            'otp_expires_at' => 'datetime',
+            'reset_otp_expires_at' => 'datetime',
         ];
     }
 
